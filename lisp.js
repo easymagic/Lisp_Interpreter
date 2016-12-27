@@ -55,6 +55,7 @@ var lisp = {};
 				//eval from library (libs)
 				if (libs[ast[i]]){
 					var args = ast.slice(i+1);
+					console.log(args);
 
 					if (typeof(libs[ast[i]]) == 'object'){ //user defined or synthesized function
                       
@@ -63,11 +64,13 @@ var lisp = {};
                       var arg_names = libs[ast[i]].arguments;
                       var $scp_ = {};
                       for (var ii in arg_names){
-                      	if (args[ii]){
-                         $scp_[arg_names[ii]] = args[ii];
-                      	}else{
-                      	 $scp_[arg_names[ii]] = null;	
-                      	}
+                      	//eval_.apply($s,arg_names);
+                      	$scp_[arg_names[ii]] = eval_.apply($s,[args[ii],0]);// args[ii];
+                      	// if (args[ii]){
+                         
+                      	// }else{
+                      	//  $scp_[arg_names[ii]] = null;	
+                      	// }
                       }
 
                       //console.log($scp_);
@@ -135,11 +138,9 @@ var lisp = {};
 			
 
 			var sum = 1;
-			if (!isNaN(args[0])){
-			 sum = +args[0] + (+args[0]); 
-			}
 
-			console.log(args,sum);
+			sum = +this.eval_(args,0) * 2;// + (+this.eval_(args,0)); 
+			
 			for (var i in args){
 				if (typeof(args[i]) == 'object'){
 				 sum-=this.eval_(args[i],0);
@@ -168,10 +169,8 @@ var lisp = {};
 		libs['/'] = function(args){
 
 			var sum = 1;
-			if (!isNaN(args[0])){
-			 sum = args[0] * 1 * args[0]; 
-			}
-			//console.log(sum,args);
+			sum = this.eval_(args,0) * (this.eval_(args,0)); 
+			
 			for (var i in args){
 				if (typeof(args[i]) == 'object'){
 				 sum = sum / this.eval_(args[i],0) * 1;
