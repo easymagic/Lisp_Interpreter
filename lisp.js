@@ -30,16 +30,12 @@ var lisp = {};
 				tree.push(sub_tree);
 					//++pointer; 
 					parse(sub_tree,function(){
-					parse(tree,bcb);
+					parse(tree,bcb); //This is GOD at work.
 				});
 			}else if (tokens[pointer] == ')'){
 				// ++pointer; //skip this token
 				//parse(tree);
 				bcb();
-			}else if (isNaN(tokens[pointer])){
-				tree.push(tokens[pointer]);
-				//++pointer; 
-				parse(tree,bcb);
 			}else{
 				//console.log('number not expected!');
 				tree.push(tokens[pointer]);
@@ -49,16 +45,50 @@ var lisp = {};
 		};
 	
 		l.eval_ = function eval_(ast,i){
+			
+			var $s = this; //$scope;
+			console.log(this);
+
 			if (typeof(ast[i]) == 'object'){
-			 return eval_(ast[i],0);
+			 return eval_.apply($s,[ast[i],0]);
 			}else{
 				//eval from library (libs)
 				if (libs[ast[i]]){
 					var args = ast.slice(i+1);
-					return libs[ast[i]].apply($scope,[args]);
+
+					if (typeof(libs[ast[i]]) == 'object'){ //user defined or synthesized function
+                      
+
+                      //console.log(libs[ast[i]]);
+                      var arg_names = libs[ast[i]].arguments;
+                      var $scp_ = {};
+                      for (var ii in arg_names){
+                      	if (args[ii]){
+                         $scp_[arg_names[ii]] = args[ii];
+                      	}else{
+                      	 $scp_[arg_names[ii]] = null;	
+                      	}
+                      }
+
+                      //console.log($scp_);
+                      //$scp_.eval_ = eval_;
+                      for (var ky in l){
+                       $scp_[ky] = l[ky];
+                      }
+
+                      //console.log($scp_,this);
+
+
+                      return eval_.apply($scp_,[libs[ast[i]].body,0]);
+
+					}else{
+					  
+					  return libs[ast[i]].apply($s,[args]); //call native function
+
+					}
 				}else{
-					if (typeof($scope[ast[i]]) != 'undefined'){
-                       return $scope[ast[i]];
+					if (typeof($s[ast[i]]) != 'undefined'){
+                       return $s[ast[i]];
 					}else{
 						return ast[i]; //integer constant.
   	                   //console.log('NS',libs[ast[i]],ast[i]);
@@ -71,6 +101,7 @@ var lisp = {};
 		var buff = [];
 
 		l.run = function run(code){
+			console.log(this);
 			buff = [];
 			this.reset();
 			this.set_tokens(code);
@@ -178,32 +209,33 @@ var lisp = {};
 		};
 		
 		libs[':='] = function(args){
-			if (this[args[1]]){
-			  this[args[0]] = this[args[1]];
-			}else{
-			  this[args[0]] = args[1];
-			} 
+			this[args[0]] = this.eval_(args,1);
+			return this[args[0]];
 			//console.log(this);
 			//this.eval_(args[]);
 		};
 
 		libs['block'] = function(args){
-			//console.log(args);
+			//console.log(this);
+			var r = null;
 			for (var i in args){
-			  this.eval_(args[i],0);
+			  r = this.eval_(args[i],0);
 			}
+			return r;
 		};
 
 		libs['print'] = function(args){
 		 var r = this.eval_(args,0);
 		 buff.push(r);
-		 console.log(r);
+		 return r;
+		 //console.log(r);
 		};
 
 		libs['echo'] = function(args){
 		 var r = this.eval_(args,0);
 		 buff.push(r);
-		 console.log(r);
+		 return r;
+		 //console.log(r);
 
 		};
 
@@ -214,11 +246,31 @@ var lisp = {};
 
 		libs['if'] = function(args){
           if (this.eval_(args,0)){
-            this.eval_(args,1)
+            return this.eval_(args,1)
           }else{
-          	this.eval_(args,2);
+          	return this.eval_(args,2);
           }
 		};
-		
+
+		libs['defn'] = function(args){
+          
+          //0 -> function name
+          //1 -> function arguments
+          //2 -> function body
+
+          //console.log(args,this.eval_(args,0));
+
+          libs[args[0]] = {
+          	arguments:args[1],
+          	body:args[2]
+          };
+
+          //console.log(libs,this);
+
+		};
+
+
+
+
 
 })(lisp);
